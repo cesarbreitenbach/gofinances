@@ -1,4 +1,7 @@
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator } from 'react-native';
 import { HightlightCard } from '../../components/HightlightCard';
 import { TransactionCard, TransactionCardProps } from '../../components/TransactionCard';
 
@@ -15,51 +18,122 @@ import {
     HightlightCards,
     Transactions,
     Title,
-    TransactionList
+    TransactionList,
+    LogoutButton,
+    LodingArea
  } from './styles';
+
+
+ interface HightlightCardProps {
+     amount: string;
+     lastDate: string;
+ }
+ interface HightlightCards {
+    incomings: HightlightCardProps;
+    expensives: HightlightCardProps;
+    total: HightlightCardProps;
+ }
 
  export interface DataListProps extends TransactionCardProps {
      id: string;
  } 
 
 export function DashBoard(){
-    const data: DataListProps[] = [
-    {
-        id: '1',
-        type: 'positive',
-        title: 'Desenvolvimento de Site', 
-        amount: "R$ 12.000,00", 
-        category: {
-            name: "vendas", 
-            icon: "dollar-sign",
-        },
-        date:"12/12/2021",
-    },
-    {
-        id: '2',
-        type: 'negative',
-        title: 'Hamburger', 
-        amount: "R$ 40,00", 
-        category: {
-            name: "alimentação", 
-            icon: "coffee",
-        },
-        date:"13/12/2021",
-    },
-    {
-        id: '3',
-        type: 'negative',
-        title: 'Pagamento aluguel', 
-        amount: "R$ 1.000,00", 
-        category: {
-            name: "casa", 
-            icon: "shopping-bag",
-        },
-        date:"12/12/2021",
-    },
-];
+    const [data, setData] = useState<DataListProps[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [hightlightCards, setHightlightCards] = useState<HightlightCards>({} as HightlightCards)
+    
+    useEffect(() => {
+
+        getTransactions();
+
+    }, [])
+
+    useFocusEffect(useCallback(() => {
+        getTransactions();
+    }, []))
+
+    function getLastTransactionDate(collection: DataListProps[], type: 'positive' | 'negative'){
+        const lastDate = 
+           Math.max.apply(Math, collection
+                         .filter(item => item.type === type)
+                         .map(item => new Date(item.date).getTime()))
+        return new Date(lastDate).toLocaleDateString('pt-BR', {day: '2-digit', month: 'long'})
+    }
+
+    async function getTransactions(){
+        const dataKey = "@gofinance:transactions";
+        const result = await AsyncStorage.getItem(dataKey);
+        const transactions = result ? JSON.parse(result) : [];
+
+        setLoading(true);
+        let incomings = 0;
+        let expensives = 0;
+        let totals = 0;
+
+        const transactionsFormatted: DataListProps[] = transactions.map((item: DataListProps) => {
+
+            if(item.type === 'positive') {
+                incomings += Number(item.amount);
+            } else {
+                expensives += Number(item.amount);
+            }
+            
+            
+            const amount = Number(item.amount).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+            })
+            
+
+            const date = new Date(item.date).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit'
+            })
+
+            return { 
+                id: item.id,
+                name: item.title,
+                type: item.type, 
+                category: item.category, 
+                amount,
+                date,
+            }
+
+        }); 
+
+        totals = incomings - expensives;
+
+        const lastIncomingsDate = getLastTransactionDate(transactions, 'positive');
+        const lastExpensivesDate = getLastTransactionDate(transactions, 'negative');
+        const interval = `01 à ${lastExpensivesDate}`
+
+        setHightlightCards({ 
+            incomings: { 
+                amount: incomings.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'}),
+                lastDate:  `Última entrada dia ${lastIncomingsDate}`
+            },
+            expensives: {
+                amount: expensives.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'}),
+                lastDate:  `Última saida dia ${lastExpensivesDate}`
+            },
+            total: {
+                amount: totals.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'}),
+                lastDate: interval
+            }
+        });
+        setData(transactionsFormatted);
+        setLoading(false);
+    }
+
+
     return (
         <Container>
+        {loading ? 
+            <LodingArea>
+                <ActivityIndicator size="large" color="#f00" />
+            </LodingArea> : <>
             <Header>
                 <UserWrapper>
                 <UserInfo>
@@ -69,13 +143,15 @@ export function DashBoard(){
                         <UserName>César</UserName>
                     </User>
                 </UserInfo>
-                <Icon name="power" />
+                <LogoutButton  onPress={() => {}}>
+                   <Icon name="power" />
+                </LogoutButton>
                 </UserWrapper>
             </Header>
             <HightlightCards > 
-                <HightlightCard type="up" title='Entradas' amount='R$ 17.400,00' lastTransaction="Última entrada dia 13 de abril"/>
-                <HightlightCard type="down" title='Saidas' amount='R$ 400,00' lastTransaction="Última saída dia 03 de abril"/>
-                <HightlightCard type="total" title='Total' amount='R$ 17.000,00' lastTransaction="01 à 16 de abril"/>
+                <HightlightCard type="up" title='Entradas' amount={hightlightCards.incomings.amount} lastTransaction={hightlightCards.incomings.lastDate}/>
+                <HightlightCard type="down" title='Saidas' amount={hightlightCards.expensives.amount} lastTransaction={hightlightCards.expensives.lastDate}/>
+                <HightlightCard type="total" title='Total' amount={hightlightCards.total.amount} lastTransaction={hightlightCards.total.lastDate}/>
             </HightlightCards>
 
             <Transactions>
@@ -86,6 +162,7 @@ export function DashBoard(){
                   renderItem={({ item }) => <TransactionCard data={item} />}
                 />
             </Transactions>
+        </>}
         </Container>
     )
 }
