@@ -19,3 +19,7 @@ export const Title = styled.Text`
     color: ${({theme}) => theme.colors.shape};
     text-align: center;
 `;
+
+export const Content = styled.ScrollView.attrs({
+    contentContainerStyle: {padding: 16, flex: 1}
+})``
