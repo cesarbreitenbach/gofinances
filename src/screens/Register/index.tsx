@@ -31,7 +31,8 @@ const schema = Yup.object().shape({
              .required('Nome é obrigatorio'),
     amount: Yup.number()
                .typeError('Informe um valor numerico')
-               .positive('O valor não po222de ser negativo'),
+               .positive('O valor não po222de ser negativo')
+               .required('Valor é obrigatorio'),
 })
 
 export function Register(){
@@ -111,7 +112,7 @@ export function Register(){
 
     // useEffect(() => {
     //     async function getStorage(){
-    //      await AsyncStorage.removeItem(dataKey);
+    //   //   await AsyncStorage.removeItem(dataKey);
     //      const data: any = await AsyncStorage.getItem(dataKey);
     //      console.log(JSON.parse(data));
     //     }
