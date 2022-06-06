@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import axios from 'axios';
@@ -28,15 +28,17 @@ interface IAuthContextData {
     user: UserProps;
     signInWithGoogle(): Promise<void>;
     signInWithApple(): Promise<void>; 
+    signOut(): Promise<void>;
 }
 
 const AuthContext = createContext({} as IAuthContextData);
 
 function AuthProvider({children}: AuthProviderProps) {
     const [user, setUser] = useState<UserProps>({} as UserProps);
+    const asyncStorageUserKey = '@gofinances:user';
 
     async function saveUserOnAsyncStorage(user: UserProps) {
-        await AsyncStorage.setItem('@gofinances:user', JSON.stringify(user));
+        await AsyncStorage.setItem(asyncStorageUserKey, JSON.stringify(user));
     }
 
     async function signInWithGoogle(){
@@ -76,10 +78,12 @@ function AuthProvider({children}: AuthProviderProps) {
                 ]
             });
             if (credentials) {
+                const name = credentials.fullName!.givenName!;
+                const photo = `https://ui-avatars.com/api/?name=${name}`;
                 const user: UserProps = {
                     id: String(credentials.user),
-                    name: credentials.fullName!.givenName!,
-                    photo: undefined,
+                    name,
+                    photo,
                     email: credentials.email!,
                 }
                 setUser(user);
@@ -91,10 +95,27 @@ function AuthProvider({children}: AuthProviderProps) {
         }
     }
 
+    async function signOut(){
+        await AsyncStorage.removeItem(asyncStorageUserKey);
+        setUser({} as UserProps);
+    }
+
+    async function getUserFromStorage(){
+        const user = await AsyncStorage.getItem(asyncStorageUserKey);
+
+        if (user) {
+            setUser(JSON.parse(user) as UserProps);
+        }
+    }
+
+    useEffect(() => {
+        getUserFromStorage();
+    }, []);
+
 
 
     return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, signInWithApple}}> 
+    <AuthContext.Provider value={{ user, signInWithGoogle, signInWithApple, signOut}}> 
         {children}
     </AuthContext.Provider> );
 }

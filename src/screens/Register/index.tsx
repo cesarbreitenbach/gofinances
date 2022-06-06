@@ -19,6 +19,7 @@ import {
 } from './styles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import uuid from 'react-native-uuid';
+import { useAuth } from '../../hooks/auth';
 
 interface FormData {
     name: string;
@@ -36,7 +37,8 @@ const schema = Yup.object().shape({
 })
 
 export function Register(){
-    const dataKey = "@gofinance:transactions";
+    const { user } = useAuth();
+    const dataKey = `@gofinance:transactions_user:${user.id}`;
     const [activeTransaction, setActiveTransaction] = useState('');
     const { navigate }: NavigationProp<ParamListBase> = useNavigation();
     const [showModal, setShowModal] = useState(false);
@@ -110,14 +112,14 @@ export function Register(){
         }
     }
 
-    // useEffect(() => {
-    //     async function getStorage(){
-    //   //   await AsyncStorage.removeItem(dataKey);
-    //      const data: any = await AsyncStorage.getItem(dataKey);
-    //      console.log(JSON.parse(data));
-    //     }
-    //     getStorage();
-    // }, [])
+    useEffect(() => {
+        async function getStorage(){
+         await AsyncStorage.removeItem(dataKey);
+        //  const data: any = await AsyncStorage.getItem(dataKey);
+        //  console.log(JSON.parse(data));
+        }
+        getStorage();
+    }, [])
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>

@@ -9,6 +9,7 @@ import {useTheme} from 'styled-components';
 import { addMonths, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../hooks/auth';
 interface TransactionsProps {
     type: 'positive' | 'negative',
     title: string;
@@ -30,6 +31,7 @@ export function Resume(){
 
     const [data, setData] = useState<CategoryData[]>([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const { user } = useAuth();
 
     const theme = useTheme()
 
@@ -42,7 +44,7 @@ export function Resume(){
     }
 
     async function loadData(){
-        const dataKey = "@gofinance:transactions";
+        const dataKey = `@gofinance:transactions_user:${user.id}`
         const response = await AsyncStorage.getItem(dataKey);
         const responseFormatted = response ? JSON.parse(response) : [];
 
@@ -74,7 +76,7 @@ export function Resume(){
                     currency: 'BRL'
                 })
 
-                let percent = `${((categorySum / totalOutcommings) * 100).toFixed(0)} %`;
+                let percent = `${((categorySum / totalOutcommings) * 100).toFixed(0)}%`;
     
                 totalByCategories.push({
                     id: category.key,
@@ -122,7 +124,7 @@ export function Resume(){
                         fontWeight: 'bold',
                         fill: theme.colors.shape
                     } }}
-                    labelRadius={100}
+                    labelRadius={110}
                     colorScale={data.map(item => item.color)}
                     x="percent" 
                     y="total"
